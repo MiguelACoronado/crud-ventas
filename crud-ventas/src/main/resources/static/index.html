@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de ventas y productos</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 24px; background: #f5f7fb; color: #1e293b; }
+        h1 { margin-bottom: 16px; }
+        h2 { margin: 0 0 12px; font-size: 20px; }
+        .card { background: #fff; border-radius: 10px; padding: 18px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: 16px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end; }
+        input, button { padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; width: 100%; box-sizing: border-box; }
+        button { cursor: pointer; border: none; background: #2563eb; color: #fff; }
+        button.secondary { background: #64748b; }
+        button.danger { background: #dc2626; }
+        table { width: 100%; border-collapse: collapse; background: #fff; margin-top: 10px; }
+        th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+        th { background: #f8fafc; }
+        .actions { display: flex; gap: 8px; }
+        .message { margin-top: 10px; color: #0f766e; min-height: 20px; }
+        .small { font-size: 13px; color: #475569; margin-bottom: 10px; }
+        .steps { background: #e2e8f0; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; }
+        .steps b { display: block; margin-bottom: 6px; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+        .tab-button { width: auto; padding: 10px 14px; background: #94a3b8; }
+        .tab-button.active { background: #2563eb; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
+        .product-item { border: 1px solid #dbe4f0; border-radius: 10px; padding: 12px; background: #f8fafc; }
+        .product-title { font-weight: 700; margin-bottom: 8px; }
+        .product-meta { margin: 4px 0; font-size: 14px; color: #334155; }
+    </style>
+</head>
+<body>
+    <h1>Panel de ventas y productos</h1>
+    <div class="steps">
+        <b>Guia rapida</b>
+        1) Crea productos en la primera seccion. 2) Registra ventas con el ID de cliente. 3) Consulta totales por cliente o factura.
+    </div>
+
+    <div class="tabs">
+        <button class="tab-button active" data-tab="tab-products" type="button">Productos</button>
+        <button class="tab-button" data-tab="tab-customers" type="button">Clientes</button>
+        <button class="tab-button" data-tab="tab-employees" type="button">Empleados</button>
+        <button class="tab-button" data-tab="tab-sales" type="button">Ventas</button>
+        <button class="tab-button" data-tab="tab-totals" type="button">Totales</button>
+        <button class="tab-button" data-tab="tab-audits" type="button">Auditorias</button>
+    </div>
+
+    <div id="tab-products" class="tab-content active">
+        <div class="card">
+            <h2>Productos (CRUD)</h2>
+            <div class="small">Gestion de productos: crear, editar, eliminar y listar.</div>
+            <form id="productForm" class="form-grid">
+                <input type="hidden" id="productId">
+                <div><label>Nombre</label><input id="name" required maxlength="120"></div>
+                <div><label>Precio</label><input id="price" type="number" step="0.01" min="0" required></div>
+                <div><label>Stock</label><input id="stock" type="number" min="0" required></div>
+                <div>
+                    <button type="submit">Guardar</button>
+                </div>
+                <div>
+                    <button type="button" class="secondary" id="cancelEdit">Cancelar</button>
+                </div>
+            </form>
+            <div id="productMessage" class="message"></div>
+            <div id="productsGrid" class="products-grid"></div>
+        </div>
+    </div>
+
+    <div id="tab-sales" class="tab-content">
+        <div class="card">
+            <h2>Registrar venta (procedimiento)</h2>
+            <div class="small">Ejecuta el procedimiento `sp_registrar_venta` en PostgreSQL.</div>
+            <form id="saleForm" class="form-grid">
+                <div><label>Customer ID</label><input id="saleCustomerId" type="number" min="1" required></div>
+                <div><label>Subtotal</label><input id="saleSubtotal" type="number" step="0.01" min="0" required></div>
+                <div><label>% IVA</label><input id="saleIva" type="number" step="0.01" min="0" value="19" required></div>
+                <div><label>% Descuento</label><input id="saleDiscount" type="number" step="0.01" min="0" value="0" required></div>
+                <div><button type="submit">Registrar venta</button></div>
+            </form>
+            <div id="saleMessage" class="message"></div>
+        </div>
+    </div>
+
+    <div id="tab-customers" class="tab-content">
+        <div class="card">
+            <h2>Clientes</h2>
+            <div class="small">Crea clientes para poder registrar ventas con su ID.</div>
+            <form id="customerForm" class="form-grid">
+                <div><label>Nombre completo</label><input id="customerFullName" maxlength="120" required></div>
+                <div><label>Correo</label><input id="customerEmail" type="email" maxlength="150" required></div>
+                <div><button type="submit">Crear cliente</button></div>
+            </form>
+            <div id="customerMessage" class="message"></div>
+            <table>
+                <thead>
+                    <tr><th>ID</th><th>Nombre</th><th>Correo</th></tr>
+                </thead>
+                <tbody id="customersTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="tab-employees" class="tab-content">
+        <div class="card">
+            <h2>Empleados (CRUD)</h2>
+            <div class="small">Gestiona empleados. Todos los cambios quedan auditados en `employee_audit`.</div>
+            <form id="employeeForm" class="form-grid">
+                <input type="hidden" id="employeeId">
+                <div><label>Nombre completo</label><input id="employeeFullName" maxlength="120" required></div>
+                <div><label>Cargo</label><input id="employeePosition" maxlength="80" required></div>
+                <div><label>Salario</label><input id="employeeSalary" type="number" step="0.01" min="0" required></div>
+                <div><button type="submit">Guardar empleado</button></div>
+                <div><button type="button" class="secondary" id="cancelEmployeeEdit">Cancelar</button></div>
+            </form>
+            <div id="employeeMessage" class="message"></div>
+            <table>
+                <thead>
+                    <tr><th>ID</th><th>Nombre</th><th>Cargo</th><th>Salario</th><th>Actualizado</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="employeesTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="tab-totals" class="tab-content">
+        <div class="card">
+            <h2>Total vendido por cliente (OUT)</h2>
+            <div class="small">Consulta el acumulado con `sp_total_vendido_por_cliente`.</div>
+            <form id="customerTotalForm" class="form-grid">
+                <div><label>Customer ID</label><input id="totalCustomerId" type="number" min="1" required></div>
+                <div><button type="submit">Consultar total</button></div>
+            </form>
+            <div id="customerTotalMessage" class="message"></div>
+        </div>
+
+        <div class="card">
+            <h2>Total de factura (función SQL)</h2>
+            <div class="small">Calcula total con impuestos/descuento usando `fn_total_factura`.</div>
+            <form id="invoiceForm" class="form-grid">
+                <div><label>Subtotal</label><input id="invoiceSubtotal" type="number" step="0.01" min="0" required></div>
+                <div><label>% IVA</label><input id="invoiceIva" type="number" step="0.01" min="0" value="19" required></div>
+                <div><label>% Descuento</label><input id="invoiceDiscount" type="number" step="0.01" min="0" value="0" required></div>
+                <div><button type="submit">Calcular</button></div>
+            </form>
+            <div id="invoiceMessage" class="message"></div>
+        </div>
+
+        <div class="card">
+            <h2>Total con impuestos (nueva función)</h2>
+            <div class="small">Calcula total con IVA usando `fn_total_con_impuestos`.</div>
+            <form id="invoiceTaxForm" class="form-grid">
+                <div><label>Subtotal</label><input id="invoiceTaxSubtotal" type="number" step="0.01" min="0" required></div>
+                <div><label>% IVA</label><input id="invoiceTaxIva" type="number" step="0.01" min="0" value="19" required></div>
+                <div><button type="submit">Calcular con impuestos</button></div>
+            </form>
+            <div id="invoiceTaxMessage" class="message"></div>
+        </div>
+    </div>
+
+    <div id="tab-audits" class="tab-content">
+        <div class="card">
+            <h2>Auditorias de empleados</h2>
+            <div class="small">Registros de cambios en empleados (`employee_audit`).</div>
+            <div class="actions">
+                <button id="reloadAudits" type="button" class="secondary">Recargar auditorias</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Empleado</th>
+                        <th>Accion</th>
+                        <th>Fecha</th>
+                        <th>Old Data</th>
+                        <th>New Data</th>
+                    </tr>
+                </thead>
+                <tbody id="auditsTableBody"></tbody>
+            </table>
+            <div id="auditMessage" class="message"></div>
+        </div>
+    </div>
+
+    <script>
+        const productForm = document.getElementById('productForm');
+        const productId = document.getElementById('productId');
+        const nameInput = document.getElementById('name');
+        const priceInput = document.getElementById('price');
+        const stockInput = document.getElementById('stock');
+        const productsGrid = document.getElementById('productsGrid');
+        const productMessage = document.getElementById('productMessage');
+        const cancelEditButton = document.getElementById('cancelEdit');
+
+        const saleForm = document.getElementById('saleForm');
+        const saleMessage = document.getElementById('saleMessage');
+        const customerTotalForm = document.getElementById('customerTotalForm');
+        const customerTotalMessage = document.getElementById('customerTotalMessage');
+        const invoiceForm = document.getElementById('invoiceForm');
+        const invoiceMessage = document.getElementById('invoiceMessage');
+        const invoiceTaxForm = document.getElementById('invoiceTaxForm');
+        const invoiceTaxMessage = document.getElementById('invoiceTaxMessage');
+        const customerForm = document.getElementById('customerForm');
+        const customerMessage = document.getElementById('customerMessage');
+        const customersTableBody = document.getElementById('customersTableBody');
+        const employeeForm = document.getElementById('employeeForm');
+        const employeeMessage = document.getElementById('employeeMessage');
+        const employeesTableBody = document.getElementById('employeesTableBody');
+        const employeeId = document.getElementById('employeeId');
+        const employeeFullName = document.getElementById('employeeFullName');
+        const employeePosition = document.getElementById('employeePosition');
+        const employeeSalary = document.getElementById('employeeSalary');
+        const cancelEmployeeEditButton = document.getElementById('cancelEmployeeEdit');
+        const auditsTableBody = document.getElementById('auditsTableBody');
+        const auditMessage = document.getElementById('auditMessage');
+        const reloadAuditsButton = document.getElementById('reloadAudits');
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        function showTab(tabId) {
+            tabContents.forEach((content) => {
+                content.classList.toggle('active', content.id === tabId);
+            });
+            tabButtons.forEach((button) => {
+                button.classList.toggle('active', button.dataset.tab === tabId);
+            });
+        }
+
+        tabButtons.forEach((button) => {
+            button.addEventListener('click', () => showTab(button.dataset.tab));
+        });
+
+        function setMessage(element, text, isError = false) {
+            element.textContent = text;
+            element.style.color = isError ? '#b91c1c' : '#0f766e';
+        }
+
+        async function parseError(response) {
+            try {
+                const err = await response.json();
+                return err.message || 'Error en la operación.';
+            } catch (_) {
+                return 'Error en la operación.';
+            }
+        }
+
+        async function loadProducts() {
+            const response = await fetch('/api/products');
+            const products = await response.json();
+            productsGrid.innerHTML = '';
+            products.forEach((product) => {
+                const card = document.createElement('div');
+                card.className = 'product-item';
+                card.innerHTML = `
+                    <div class="product-title">${product.name}</div>
+                    <div class="product-meta"><strong>ID:</strong> ${product.id}</div>
+                    <div class="product-meta"><strong>Precio:</strong> ${product.price}</div>
+                    <div class="product-meta"><strong>Stock:</strong> ${product.stock}</div>
+                    <div class="actions"></div>`;
+
+                const actionsCell = card.querySelector('.actions');
+                const editBtn = document.createElement('button');
+                editBtn.className = 'secondary';
+                editBtn.textContent = 'Editar';
+                editBtn.addEventListener('click', () => editProduct(product));
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'danger';
+                deleteBtn.textContent = 'Eliminar';
+                deleteBtn.addEventListener('click', () => deleteProduct(product.id));
+
+                actionsCell.appendChild(editBtn);
+                actionsCell.appendChild(deleteBtn);
+                productsGrid.appendChild(card);
+            });
+        }
+
+        async function loadCustomers() {
+            const response = await fetch('/api/customers');
+            if (!response.ok) {
+                setMessage(customerMessage, await parseError(response), true);
+                return;
+            }
+            const customers = await response.json();
+            customersTableBody.innerHTML = '';
+            customers.forEach((customer) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${customer.id}</td>
+                    <td>${customer.fullName}</td>
+                    <td>${customer.email}</td>`;
+                customersTableBody.appendChild(row);
+            });
+        }
+
+        async function loadAudits() {
+            const response = await fetch('/api/audits');
+            if (!response.ok) {
+                setMessage(auditMessage, await parseError(response), true);
+                return;
+            }
+            const audits = await response.json();
+            auditsTableBody.innerHTML = '';
+            audits.forEach((audit) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${audit.id}</td>
+                    <td>${audit.employeeId ?? ''}</td>
+                    <td>${audit.actionType}</td>
+                    <td>${audit.changedAt}</td>
+                    <td>${audit.oldData ?? ''}</td>
+                    <td>${audit.newData ?? ''}</td>`;
+                auditsTableBody.appendChild(row);
+            });
+            setMessage(auditMessage, `Auditorias cargadas: ${audits.length}`);
+        }
+
+        async function loadEmployees() {
+            const response = await fetch('/api/employees');
+            if (!response.ok) {
+                setMessage(employeeMessage, await parseError(response), true);
+                return;
+            }
+            const employees = await response.json();
+            employeesTableBody.innerHTML = '';
+            employees.forEach((employee) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${employee.id}</td>
+                    <td>${employee.fullName}</td>
+                    <td>${employee.position}</td>
+                    <td>${employee.salary}</td>
+                    <td>${employee.updatedAt ?? ''}</td>
+                    <td class="actions"></td>`;
+                const actionsCell = row.querySelector('.actions');
+                const editBtn = document.createElement('button');
+                editBtn.className = 'secondary';
+                editBtn.textContent = 'Editar';
+                editBtn.addEventListener('click', () => editEmployee(employee));
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'danger';
+                deleteBtn.textContent = 'Eliminar';
+                deleteBtn.addEventListener('click', () => deleteEmployee(employee.id));
+                actionsCell.appendChild(editBtn);
+                actionsCell.appendChild(deleteBtn);
+                employeesTableBody.appendChild(row);
+            });
+        }
+
+        function editProduct(product) {
+            productId.value = product.id;
+            nameInput.value = product.name;
+            priceInput.value = product.price;
+            stockInput.value = product.stock;
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('¿Seguro que deseas eliminar este producto?')) return;
+            const response = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+            if (!response.ok) {
+                setMessage(productMessage, await parseError(response), true);
+                return;
+            }
+            setMessage(productMessage, 'Producto eliminado correctamente.');
+            await loadProducts();
+        }
+
+        function resetProductForm() {
+            productId.value = '';
+            productForm.reset();
+        }
+
+        function editEmployee(employee) {
+            employeeId.value = employee.id;
+            employeeFullName.value = employee.fullName;
+            employeePosition.value = employee.position;
+            employeeSalary.value = employee.salary;
+        }
+
+        function resetEmployeeForm() {
+            employeeId.value = '';
+            employeeForm.reset();
+        }
+
+        async function deleteEmployee(id) {
+            if (!confirm('¿Seguro que deseas eliminar este empleado?')) return;
+            const response = await fetch(`/api/employees/${id}`, { method: 'DELETE' });
+            if (!response.ok) {
+                setMessage(employeeMessage, await parseError(response), true);
+                return;
+            }
+            setMessage(employeeMessage, 'Empleado eliminado correctamente.');
+            await loadEmployees();
+            await loadAudits();
+        }
+
+        productForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: nameInput.value,
+                price: Number(priceInput.value),
+                stock: Number(stockInput.value)
+            };
+            const id = productId.value;
+            const endpoint = id ? `/api/products/${id}` : '/api/products';
+            const method = id ? 'PUT' : 'POST';
+
+            const response = await fetch(endpoint, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                setMessage(productMessage, await parseError(response), true);
+                return;
+            }
+            setMessage(productMessage, id ? 'Producto actualizado.' : 'Producto creado.');
+            resetProductForm();
+            await loadProducts();
+        });
+
+        cancelEditButton.addEventListener('click', resetProductForm);
+
+        customerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                fullName: document.getElementById('customerFullName').value,
+                email: document.getElementById('customerEmail').value
+            };
+            const response = await fetch('/api/customers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                setMessage(customerMessage, await parseError(response), true);
+                return;
+            }
+            setMessage(customerMessage, 'Cliente creado correctamente.');
+            customerForm.reset();
+            await loadCustomers();
+        });
+
+        employeeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                fullName: employeeFullName.value,
+                position: employeePosition.value,
+                salary: Number(employeeSalary.value)
+            };
+            const id = employeeId.value;
+            const endpoint = id ? `/api/employees/${id}` : '/api/employees';
+            const method = id ? 'PUT' : 'POST';
+            const response = await fetch(endpoint, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                setMessage(employeeMessage, await parseError(response), true);
+                return;
+            }
+            setMessage(employeeMessage, id ? 'Empleado actualizado.' : 'Empleado creado.');
+            resetEmployeeForm();
+            await loadEmployees();
+            await loadAudits();
+        });
+
+        saleForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                customerId: Number(document.getElementById('saleCustomerId').value),
+                subtotal: Number(document.getElementById('saleSubtotal').value),
+                ivaPercentage: Number(document.getElementById('saleIva').value),
+                discountPercentage: Number(document.getElementById('saleDiscount').value)
+            };
+            const response = await fetch('/api/sales/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                setMessage(saleMessage, await parseError(response), true);
+                return;
+            }
+            const data = await response.json();
+            setMessage(saleMessage, `Venta registrada. ID: ${data.saleId}`);
+            saleForm.reset();
+        });
+
+        customerTotalForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const customerId = Number(document.getElementById('totalCustomerId').value);
+            const response = await fetch(`/api/sales/total-by-customer/${customerId}`);
+            if (!response.ok) {
+                setMessage(customerTotalMessage, await parseError(response), true);
+                return;
+            }
+            const data = await response.json();
+            setMessage(customerTotalMessage, `Total vendido cliente ${data.customerId}: ${data.total}`);
+        });
+
+        invoiceForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const subtotal = Number(document.getElementById('invoiceSubtotal').value);
+            const iva = Number(document.getElementById('invoiceIva').value);
+            const discount = Number(document.getElementById('invoiceDiscount').value);
+            const response = await fetch(`/api/sales/invoice-total?subtotal=${subtotal}&ivaPercentage=${iva}&discountPercentage=${discount}`);
+            if (!response.ok) {
+                setMessage(invoiceMessage, await parseError(response), true);
+                return;
+            }
+            const data = await response.json();
+            setMessage(invoiceMessage, `Total factura: ${data.total}`);
+        });
+
+        invoiceTaxForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const subtotal = Number(document.getElementById('invoiceTaxSubtotal').value);
+            const iva = Number(document.getElementById('invoiceTaxIva').value);
+            const response = await fetch(`/api/sales/invoice-total-with-tax?subtotal=${subtotal}&ivaPercentage=${iva}`);
+            if (!response.ok) {
+                setMessage(invoiceTaxMessage, await parseError(response), true);
+                return;
+            }
+            const data = await response.json();
+            setMessage(invoiceTaxMessage, `Total con impuestos: ${data.total}`);
+        });
+
+        reloadAuditsButton.addEventListener('click', loadAudits);
+        cancelEmployeeEditButton.addEventListener('click', resetEmployeeForm);
+
+        loadProducts();
+        loadCustomers();
+        loadEmployees();
+        loadAudits();
+    </script>
+</body>
+</html>
