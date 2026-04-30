@@ -22,6 +22,6 @@ public class EmployeeRequest {
     private String position;
 
     @NotNull
-    @DecimalMin(value = "0.0", inclusive = true)
+    @DecimalMin(value = "0.0")
     private BigDecimal salary;
 }
