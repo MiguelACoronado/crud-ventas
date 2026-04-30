@@ -19,7 +19,7 @@ public class ProductRequest {
     private String name;
 
     @NotNull
-    @DecimalMin(value = "0.0", inclusive = true)
+    @DecimalMin(value = "0.0")
     private BigDecimal price;
 
     @NotNull
