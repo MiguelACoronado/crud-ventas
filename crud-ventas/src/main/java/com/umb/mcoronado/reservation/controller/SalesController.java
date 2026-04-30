@@ -47,8 +47,8 @@ public class SalesController {
     @GetMapping("/invoice-total")
     public ResponseEntity<Map<String, Object>> invoiceTotal(
             @RequestParam BigDecimal subtotal,
-            @RequestParam(defaultValue = "19") BigDecimal ivaPercentage,
-            @RequestParam(defaultValue = "0") BigDecimal discountPercentage) {
+            @RequestParam(defaultValue = "19")  ivaPercentage,
+            @RequestParam(defaultValue = "0")  discountPercentage) {
         BigDecimal total = salesDatabaseService.calculateInvoiceTotal(subtotal, ivaPercentage, discountPercentage);
         return ResponseEntity.ok(Map.of(
                 "subtotal", subtotal,
@@ -60,7 +60,7 @@ public class SalesController {
     @GetMapping("/invoice-total-with-tax")
     public ResponseEntity<Map<String, Object>> invoiceTotalWithTax(
             @RequestParam BigDecimal subtotal,
-            @RequestParam(defaultValue = "19") BigDecimal ivaPercentage) {
+            @RequestParam(defaultValue = "19") ivaPercentage) {
         BigDecimal total = salesDatabaseService.calculateInvoiceTotalWithTax(subtotal, ivaPercentage);
         return ResponseEntity.ok(Map.of(
                 "subtotal", subtotal,
